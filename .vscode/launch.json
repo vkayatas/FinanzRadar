@@ -1,0 +1,42 @@
+{
+    "configurations": [
+        {
+            "name": "Launch Chrome against localhost",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:5173",
+            "webRoot": "${workspaceFolder}/vue-frontend",
+            "breakOnLoad": true,
+            "sourceMaps": true,
+            "runtimeArgs": ["--auto-open-devtools-for-tabs"]
+        },
+        {
+            "name": "Python: FastAPI",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/backend/main.py",
+            "python": "C:\\python_venvs\\.vue_venv\\Scripts\\python.exe",  
+            "args": [
+                "-m", "uvicorn",
+                "main:app", 
+                "--reload"
+            ],
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {},
+            "envFile": "${workspaceFolder}/.env",
+            "justMyCode": true
+          },
+    ]
+}

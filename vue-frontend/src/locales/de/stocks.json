@@ -1,0 +1,13 @@
+{
+  "labels": {
+    "sector": "Sektor",
+    "marketCap": "Marktkapitalisierung",
+    "industry": "Industrie",
+    "country": "Land",        
+    "lastUpdated": "Letzte Aktualisierung:"
+  },
+  "messages": {
+    "autocompletePlaceholder": "Unternehmen oder Ticker eingeben...",
+    "noResults": "Keine Treffer gefunden..."
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "labels": {
+    "sector": "Sector",
+    "industry": "Industry",
+    "country": "Country",        
+    "marketCap": "Market Cap",
+    "lastUpdated": "Last updated"
+  },
+  "messages": {
+    "autocompletePlaceholder": "Search by company name or ticker...",
+    "noResults": "No results found."
+  }
+}
