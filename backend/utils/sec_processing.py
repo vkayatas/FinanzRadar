@@ -4,11 +4,9 @@ import pandas as pd
 from typing import Optional
 from functools import lru_cache
 
-CACHE_SIZE = 128
-HEADERS = {
-    'User-Agent': 'FinDataFetcher/1.0 (contact@example.com)',
-    'Accept': 'application/json'
-}
+from utils.config import CACHE_SIZE, HEADERS
+
+
 
 def safe_request(url: str, retries: int = 3, backoff: float = 0.5) -> Optional[dict]:
     for attempt in range(retries):
@@ -21,6 +19,10 @@ def safe_request(url: str, retries: int = 3, backoff: float = 0.5) -> Optional[d
         time.sleep(backoff * (2 ** attempt))  # exponential backoff
     return None
 
+@lru_cache(maxsize=CACHE_SIZE)
+def get_all_us_gaap_data(cik: str) -> Optional[dict]:
+    url = f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
+    return safe_request(url)
 
 def get_sec_submissions(cik: str) -> dict:
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
