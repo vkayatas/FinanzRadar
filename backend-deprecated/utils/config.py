@@ -16,7 +16,7 @@ HEADERS = {
 METRICS_CONCEPTS = {
     # Balance Sheet
     "TotalCurrentAssets": ["AssetsCurrent"],
-    "CashAndCashEquivalents" : ["CashAndCashEquivalentsAtCarryingValue"],
+    "TotalCash" : ["CashAndCashEquivalentsAtCarryingValue"],
     "TotalAssets": ["Assets"],
     "ShortTermDebt": ["LongTermDebtCurrent", "DebtCurrent"],
     "TotalCurrentLiabilities": ["LiabilitiesCurrent"],
@@ -34,7 +34,7 @@ METRICS_CONCEPTS = {
     "TotalOperatingExpenses": ["CostsAndExpenses", "OperatingExpenses"],
     "OperatingIncome": ["OperatingIncomeLoss"],
     "NonOperatingIncomeExpense": ["NonoperatingIncomeExpense"],
-    "DepreciationAmortization": ["DepreciationAmortization", "Depreciation", "DepreciationDepletionAndAmortization"],
+    "DepreciationAmortization": ["DepreciationAmortization", "DepreciationDepletionAndAmortization"],
     "NetIncome": ["ProfitLoss", "NetIncomeLoss"],
     "BasicEps": ["EarningsPerShareBasic", "BasicEarningsLossPerShare"],
     "DilutedEps": ["EarningsPerShareDiluted", "DilutedEarningsLossPerShare"],
@@ -45,13 +45,12 @@ METRICS_CONCEPTS = {
     # Cashflow
     "StockBasedCompensation": ["ShareBasedCompensation"],
     "OperatingCashFlow": ["NetCashProvidedByUsedInOperatingActivities"],
-    "TotalCash": ["CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents"],
     "DividendsPaid": ["PaymentsOfDividends", "PaymentsOfDividendsCommonStock"],
     "StockBuybacks": ["PaymentsForRepurchaseOfCommonStock"], 
     "CapitalExpenditures": ["PaymentsToAcquirePropertyPlantAndEquipment", "PaymentsToAcquireProductiveAssets"], # "PaymentsToAcquireProductiveAssets", "CapitalExpenditures"
+    "InterestExpense": ["InterestExpense"]
     #"InterestPaid": ["CashPaidForInterest"], #TODO: Unsure and unnecessary
 }
-
 COMPANY_TAG_OVERRIDES = {
     "AAPL": {
         "Revenue": ["Revenues"],  
@@ -110,7 +109,7 @@ CUSTOM_METRICS = [
         "result_col": "ROE",
     },
     #{
-    #     "columns": ["OperatingIncome", "TotalDebt", "StockholdersEquity", "CashAndCashEquivalents", "TaxRate"],
+    #     "columns": ["OperatingIncome", "TotalDebt", "StockholdersEquity", "TotalCash", "TaxRate"],
     #     "func": lambda op_inc, debt, equity, cash, tax: (
     #         (op_inc * (1 - tax.fillna(0))).div((debt + equity - cash).replace(0, pd.NA)).mul(100)
     #     ),
@@ -125,14 +124,13 @@ CUSTOM_METRICS = [
         "func": lambda ltd, std, equity: (ltd.add(std, fill_value=0)).div(equity.replace(0, pd.NA)),
         "result_col": "DebtToEquity",
     },
-    # InterestPaid not in METRICS_CONCEPTS → skip if missing
     {
-        "columns": ["OperatingIncome", "InterestPaid"],
+        "columns": ["OperatingIncome", "InterestExpense"],
         "func": lambda op_inc, interest: op_inc.div(interest.replace(0, pd.NA)) if interest is not None else pd.NA,
         "result_col": "InterestCoverage",
     },
     {
-        "columns": ["LongTermDebt", "ShortTermDebt", "CashAndCashEquivalents", "OperatingIncome", "DepreciationAmortization"],
+        "columns": ["LongTermDebt", "ShortTermDebt", "TotalCash", "OperatingIncome", "DepreciationAmortization"],
         "func": lambda ltd, std, cash, op_inc, dep: (
             (ltd.add(std, fill_value=0) - cash).div((op_inc + dep.fillna(0)).replace(0, pd.NA))
         ),
@@ -164,7 +162,7 @@ CUSTOM_METRICS = [
     # },
     # placeholders for ratios computed from other inputs if available
     # {
-    #     "columns": ["MarketCap", "TotalDebt", "CashAndCashEquivalents", "OperatingIncome", "DepreciationAmortization"],
+    #     "columns": ["MarketCap", "TotalDebt", "TotalCash", "OperatingIncome", "DepreciationAmortization"],
     #     "func": lambda mc, debt, cash, op_inc, dep: (
     #         (mc + debt - cash).div((op_inc + dep.fillna(0)).replace(0, pd.NA))
     #     ),
@@ -181,7 +179,7 @@ CUSTOM_METRICS = [
     #     "result_col": "PEGRatio",
     # },
     # {
-    #     "columns": ["MarketCap", "TotalDebt", "CashAndCashEquivalents", "Revenue"],
+    #     "columns": ["MarketCap", "TotalDebt", "TotalCash", "Revenue"],
     #     "func": lambda mc, debt, cash, rev: ((mc + debt - cash).div(rev.replace(0, pd.NA))).round(2),
     #     "result_col": "EVToSales",
     # }

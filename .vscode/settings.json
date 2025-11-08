@@ -1,0 +1,22 @@
+{
+    // Set the default Python interpreter for this workspace
+    "python.defaultInterpreterPath": "C:/Code/finanz_radar_venv/Scripts/python.exe",
+
+    // Optional: Enable linting (you can keep or remove)
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": true,
+
+    // Optional: Auto-formatting
+    "python.formatting.provider": "black",
+
+    // Optional: Set PYTHONPATH to workspace root for imports
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}"
+    ],
+
+    // Ensure terminal uses the same venv
+    "python.terminal.activateEnvironment": true,
+
+    // Optional: Code completion and IntelliSense
+    "python.languageServer": "Pylance"
+}

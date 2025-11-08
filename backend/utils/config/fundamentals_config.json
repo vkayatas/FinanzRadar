@@ -1,0 +1,7 @@
+{
+    "output_dir": "backend/featurestore/20_silver/",
+    "partition_cols": ["form", "ticker"],
+    "OVERWRITE_FUNDAMENTALS": false,
+    "mode": "10-K",
+    "tickers": ["AAPL", "MSFT", "NVDA", "META", "V", "MCD", "JNJ", "PFE", "NKE", "ZAL", "ASML", "AMZN", "FICO", "ADBE", "ANET", "GOOGL", "SPGI", "NOVO", "CRM"]
+}

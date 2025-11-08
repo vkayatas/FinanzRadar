@@ -3,6 +3,7 @@
 </template>
 
 <script setup>
+import { formatCurrency } from '@/api/utils/mathUtils.js'
 import { ref, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
 import * as echarts from 'echarts'
 
@@ -18,6 +19,7 @@ const props = defineProps({
   yAxisName: { type: String, default: 'Value' },
   xAxisLabel: { type: String, default: 'Category' },
   grid: { type: Object, default: () => ({ left: '10%', right: '10%', bottom: '10%' }) },
+  formatCurrency: { type: String },
   barWidth: { type: String, default: '40%' } // smaller width to fit multiple bars side-by-side
 })
 
@@ -33,7 +35,9 @@ const setOptions = () => {
       axisPointer: { type: 'shadow' },
       formatter: (params) =>
         params
-          .map(p => `${p.marker} ${p.seriesName}: ${p.data} <br/> ${props.xAxisLabel}: ${p.axisValue}`)
+          .map(p => {
+            const value = formatCurrency(p.data, props.formatCurrency) 
+            return `${p.marker} ${p.seriesName}: ${value} <br/> ${props.xAxisLabel}: ${p.axisValue}`})
           .join('<br/>')
     },
     legend: {

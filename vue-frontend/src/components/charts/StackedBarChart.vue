@@ -4,6 +4,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
+import { formatCurrency } from '@/api/utils/mathUtils.js'
 import * as echarts from 'echarts';
 
 const props = defineProps({
@@ -24,7 +25,7 @@ const setOptions = () => {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
       formatter: (params) =>
-        params.map(p => `${p.marker} ${p.seriesName}: ${p.data} <br/> ${props.xAxisLabel}: ${p.axisValue}`).join('<br/>')
+        params.map(p => `${p.marker} ${p.seriesName}: ${formatCurrency(p.data)} <br/> ${props.xAxisLabel}: ${p.axisValue}`).join('<br/>')
     },
     legend: {
       top: 'top',

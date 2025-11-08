@@ -15,7 +15,7 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/backend/main.py",
-            "python": "C:\\python_venvs\\.vue_venv\\Scripts\\python.exe",  
+            "python": "C:/Code/finanz_radar_venv/Scripts/python.exe",  
             "args": [
                 "-m", "uvicorn",
                 "main:app", 
@@ -36,7 +36,8 @@
             "cwd": "${workspaceFolder}",
             "env": {},
             "envFile": "${workspaceFolder}/.env",
-            "justMyCode": true
+            "justMyCode": true,
+            "python": "C:/Code/finanz_radar_venv/Scripts/python.exe"
           },
     ]
 }

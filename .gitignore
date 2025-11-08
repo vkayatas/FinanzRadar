@@ -1,3 +1,6 @@
+node_modules/
+corprootCA.crt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

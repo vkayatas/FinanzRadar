@@ -64,7 +64,8 @@ const props = defineProps({
   xAxisType: { type: String },  
   areaStyle: { type: Boolean },        
   hideFullscreenButton: { type: Boolean, default: false },
-  showDeltaBadges: { type: Boolean, default: true } 
+  showDeltaBadges: { type: Boolean, default: true },
+  formatCurrency: { type: String}
 })
 
 const emit = defineEmits(['fullscreen'])
@@ -91,7 +92,8 @@ function openFullscreen() {
     xAxisName: props.xAxisName ?? 'X_Axis',
     yAxisName: props.yAxisName ?? 'Y_Axis',
     xAxisType: props.xAxisType ?? 'value',
-    areaStyle: props.areaStyle ?? null
+    areaStyle: props.areaStyle ?? null,
+    formatCurrency: props.formatCurrency
   })
 }
 

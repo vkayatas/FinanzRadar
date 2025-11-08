@@ -35,6 +35,7 @@
               :areaStyle="chart.areaStyle"
               :chartType="chart.chartType"
               :showDeltaBadges="props.showDeltaBadges"
+              :formatCurrency="chart.formatCurrency" 
             />
           </template>
         </ChartCard>
@@ -79,7 +80,8 @@ const processedCharts = computed(() =>
       yAxisName: chart.yAxisName || 'Y',
       xAxisType: chart.xAxisType || 'value',
       areaStyle: chart.areaStyle || null,
-      showDeltaBadges: props.showDeltaBadges
+      showDeltaBadges: props.showDeltaBadges,
+      formatCurrency: chart.formatCurrency
     };
   })
 );
@@ -102,7 +104,8 @@ function openFullscreen(chart) {
     xAxisName: chart.xAxisName,
     yAxisName: chart.yAxisName,
     xAxisType: chart.xAxisType,
-    areaStyle: chart.areaStyle
+    areaStyle: chart.areaStyle,
+    formatCurrency: chart.formatCurrency
   });
 }
 </script>

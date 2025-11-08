@@ -1,12 +1,14 @@
+import { formatCurrency } from "./mathUtils";
+
 //Config
 export const sectionConfigs = {
   growthAndInvestment: {
     title: "Growth & Investment Metrics",
     charts: [
-      { metric: "Revenue", color: "#4F46E5", title: "Revenue Growth", chartType: "bar", yAxisName: "Revenue ($M)" },
+      { metric: "Revenue", color: "#4F46E5", title: "Revenue Growth", chartType: "bar", yAxisName: "Revenue ($M)"},
       {metrics: [
-          { metric: "BasicEPS", color: "#10B981" },
-          { metric: "DilutedEPS", color: "#6366F1" }
+          { metric: "BasicEps", color: "#10B981" },
+          { metric: "DilutedEps", color: "#6366F1" }
         ],
         title: "EPS Growth", chartType: "bar", yAxisName: "EPS Growth"},
       { metrics: [
@@ -28,9 +30,9 @@ export const sectionConfigs = {
           { metric: "OperatingCashFlow", color: "#6366F1" }
         ],
         title: "Cash Flow Growth", chartType: "line", yAxisName: "FCF ($M)"},
-      { metric: "SharesOutstanding", color: "#10B981", title: "Shares Outstanding", chartType: "bar", yAxisName: "Shares" },
-      { metric: "StockRepurchase", color: "#EF4444", title: "Repurchase of Common Stock", chartType: "bar", yAxisName: "Repurchase ($M)" },
-      { metric: "Dividend", color: "#6366F1", title: "Dividend and Dividend Yield", chartType: "area", yAxisName: "Dividend ($)" }
+      { metric: "SharesOutstanding", color: "#10B981", title: "Shares Outstanding", chartType: "bar", yAxisName: "Shares", formatCurrency: ""},
+      { metric: "StockBuybacks", color: "#EF4444", title: "Repurchase of Common Stock", chartType: "bar", yAxisName: "Repurchase ($M)" },
+      { metric: "DividendsPaid", color: "#6366F1", title: "Dividend and Dividend Yield", chartType: "area", yAxisName: "Dividend ($)" }
     ]
   },
   profitability: {

@@ -1,29 +1,29 @@
 import time
-import json
-import shutil
-import logging
+import numpy as np 
 import pandas as pd
-from pathlib import Path
+import yfinance as yf 
 from typing import Dict, List
 
-from utils.yahoo_fundamentals import get_market_cap_exact_dates
 from utils.pandas_utils import _convert_date_columns, _round_columns
-from utils.sec_processing import get_cik_from_ticker, get_all_us_gaap_data
-from utils.config.config import CUSTOM_METRICS, METRICS_CONCEPTS, COMPANY_TAG_OVERRIDES, MAX_ANNUAL_DELTA_DAYS, MAX_QUARTER_DELTA_DAYS, MIN_ANNUAL_DELTA_DAYS, MIN_QUARTER_DELTA_DAYS
+from utils.sec_processing import build_fiscal_metadata, get_cik_from_ticker, get_all_us_gaap_data
+from utils.config import CUSTOM_METRICS, METRICS_CONCEPTS, COMPANY_TAG_OVERRIDES, MAX_ANNUAL_DELTA_DAYS, MAX_QUARTER_DELTA_DAYS, MIN_ANNUAL_DELTA_DAYS, MIN_QUARTER_DELTA_DAYS
 
+import logging
 logger = logging.getLogger(__name__)
 
 SHARE_METRICS = ["WeightedAverageNumberOfSharesOutstandingBasic", "WeightedAverageNumberOfDilutedSharesOutstanding"]
 
-# TODO: used for test, delete later or make smarter
+# TODO: For quarterly data e.g. AAPL & SBC (ShareBasedCompensation) we have an issue. For now i assume that the values are added for each quarter, but atleast in this case I could calculate the exact values. So they report 3 Months SBC and than 6 Months SBC, so i could calculate the difference and hence fetch the missing value for the next quarter.
+# I hope this is more of an edge case. But probably not. So hopefully only for certain metrics we need to do this calculation. But is is more likely that we have to do this generically, for all cases.
+# My idea right now, is to fill out between the min and max dates the target frames, and write a checker function that searches if this fix is feasible. If yes, we fix it, if not, we leave it as nan.
+
 def _get_us_gaap_metrics_for_ticker(ticker: str, filing_type: str = "10-K") -> pd.DataFrame:
     ticker = ticker.upper()
     
     # Step 1: Get CIK
     cik = get_cik_from_ticker(ticker)
     if not cik:
-        print(f"No SEC entry for ticker: '{ticker}'. Skip data fetching...")
-        return pd.DataFrame()
+        raise ValueError(f"Invalid ticker: {ticker}")
 
     # Step 2: Fetch SEC GAAP data
     sec_data = get_all_us_gaap_data(cik)
@@ -42,31 +42,7 @@ def _get_us_gaap_metrics_for_ticker(ticker: str, filing_type: str = "10-K") -> p
     return preprocessed
 
 def get_company_metrics_history(ticker: str, filing_type: str = "10-K") -> pd.DataFrame:
-    # ticker = ticker.upper()
-    
-    # # Step 1: Get CIK
-    # cik = get_cik_from_ticker(ticker)
-    # if not cik:
-    #     raise ValueError(f"Invalid ticker: {ticker}")
-
-    # # Step 2: Fetch SEC GAAP data
-    # sec_data = get_all_us_gaap_data(cik)
-    # if not sec_data:
-    #     raise RuntimeError(f"Failed to fetch GAAP sec_data for {ticker}")
-    
-    # # Step 2.1: Keep only relevant us:gaap metrics 
-    # if not sec_data.get("facts", {}).get("us-gaap"):
-    #     return pd.DataFrame()
-    
-    # us_gaap = sec_data["facts"]["us-gaap"]
-    # relevant_metrics = set(chain(*METRICS_CONCEPTS.values(), *COMPANY_TAG_OVERRIDES.get(ticker, {}).values()))
-    # us_gaap = {k: v for k, v in us_gaap.items() if k in relevant_metrics}
-    
-    # # Step 3: Preprocess once 
-    # preprocessed = _preprocess_us_gaap(us_gaap, filing_type)
     preprocessed = _get_us_gaap_metrics_for_ticker(ticker, filing_type)
-    if len(preprocessed) == 0:
-        return pd.DataFrame() 
     
     # Step 4: Merge metrics 
     df = _merge_sec_metrics(preprocessed, ticker=ticker, metrics_dict=METRICS_CONCEPTS, company_metrics=COMPANY_TAG_OVERRIDES)
@@ -79,8 +55,8 @@ def get_company_metrics_history(ticker: str, filing_type: str = "10-K") -> pd.Da
     df, pivot_index, frame_dict = _pivot_data_preparation(df, filing_type)
     df = df.pivot_table(index=pivot_index, columns='metric', values='val', aggfunc='first').reset_index()
     df = _round_columns(df, columns=["DilutedEps", "BasicEps"], decimals=2)
-    df["MarketCap"] = get_market_cap_exact_dates(ticker, df.end.tolist()).reindex(df["end"]).values
-     
+    # TODO: Remove default date from function call
+    #df["MarketCap"] = get_market_cap_exact_dates(ticker, df.end.tolist())
     # Step 6: Compute custom metrics
     df = _apply_custom_metrics(df, CUSTOM_METRICS).sort_values("end", ascending=False)
     
@@ -229,10 +205,6 @@ def _fix_missing_quarters(df_fundamental, df_fy, metric: str):
                 
     return df_fundamental
 
-# TODO: For quarterly data e.g. AAPL & SBC (ShareBasedCompensation) we have an issue. For now i assume that the values are added for each quarter, but atleast in this case I could calculate the exact values. So they report 3 Months SBC and than 6 Months SBC, so i could calculate the difference and hence fetch the missing value for the next quarter.
-# I hope this is more of an edge case. But probably not. So hopefully only for certain metrics we need to do this calculation. But is is more likely that we have to do this generically, for all cases.
-# My idea right now, is to fill out between the min and max dates the target frames, and write a checker function that searches if this fix is feasible. If yes, we fix it, if not, we leave it as nan.
-
 def _preprocess_us_gaap(us_gaap: dict, filing_type: str, allowed_units: list = ["USD", "shares", "USD/shares"]) -> Dict[str, List[dict]]:
     """
     Preprocess US GAAP data for a given filing type.
@@ -336,69 +308,63 @@ def _pivot_data_preparation(df, filing_type:str):
     
     return df, pivot_index, frame_dict
 
-def write_partitioned_parquet(df: pd.DataFrame, output_dir: str, partition_cols: list, engine: str = 'pyarrow'):
-    output_path = Path(output_dir)
+def _align_previous_available_dates(dates: pd.DatetimeIndex, source_index: pd.DatetimeIndex):
+    dates = pd.to_datetime(dates).values.astype("datetime64[ns]")
+    source_index = np.sort(source_index.values.astype("datetime64[ns]"))
+    
+    # searchsorted finds insertion point
+    idx = np.searchsorted(source_index, dates, side="right") - 1
+    idx[idx < 0] = 0  # if no previous available, pick first element
 
-    # Delete existing partition folders that match the data in df
-    for _, row in df[partition_cols].drop_duplicates().iterrows():
-        partition_path = output_path
-        for col in partition_cols:
-            partition_path = partition_path / f"{col}={row[col]}"
-        if partition_path.exists():
-            shutil.rmtree(partition_path)  # remove old files
+    return pd.to_datetime(source_index[idx])
 
-    # Now write the DataFrame
-    df.to_parquet(output_dir, engine=engine, partition_cols=partition_cols, index=False)
+def get_market_cap_exact_dates(ticker_symbol: str, dates: pd.DatetimeIndex) -> pd.Series:
+    ticker = yf.Ticker(ticker_symbol)
+    
+    # Ensure datetime and normalize
+    dates = pd.to_datetime(dates).normalize()
+    start_date = dates.min() 
+    end_date = dates.max()
+
+    # Shares
+    shares_outstanding = ticker.get_shares_full(start=start_date - pd.DateOffset(years=1))
+    shares_outstanding.index = shares_outstanding.index.tz_localize(None)
+    shares_outstanding = shares_outstanding[~shares_outstanding.index.duplicated()]
+
+    # Prices
+    prices = ticker.history(start=start_date - pd.DateOffset(days=45), end=end_date, interval="1d")["Close"]
+    prices.index = prices.index.tz_localize(None)
+
+    # Reindex + forward fill
+    aligned_dates_prices = _align_previous_available_dates(dates, prices.index)
+    aligned_dates_shares = _align_previous_available_dates(dates, shares_outstanding.index)
+    shares_aligned = shares_outstanding.reindex(aligned_dates_shares).values
+    prices_aligned = prices.reindex(aligned_dates_prices).values
+
+    # Build final Series
+    market_cap =  pd.Series(prices_aligned * shares_aligned, index=dates, name="MarketCap").astype("int")
+
+    return market_cap
 
 if __name__ == "__main__":
-    # Init arguments
-    config_path = Path("backend/utils/config/fundamentals_config.json")
-    with open(config_path) as f:
-        config = json.load(f)
-        
-    # Access config
-    output_dir = config["output_dir"]
-    partition_cols = config["partition_cols"]
-    OVERWRITE_FUNDAMENTALS = config["OVERWRITE_FUNDAMENTALS"] # TODO: logic to overwrite per ticker whenever there is a new 10-K or 10-Q report available so that we run this only when new data is actually there
-    mode = config["mode"]
-    tickers = config["tickers"]
-    
     start_time = time.time()
     
-    # Fetch SEC data
+    # Arguments
+    mode = "10-K"; assert mode in ["10-K", "10-Q"]
+    tickers = ["AAPL","MSFT", "NVDA", "META"]
+
     dfs = []
     for ticker in tickers:
         ticker_start_time = time.time()
 
-        # Construct the path for the Parquet file(s)
-        partition_path = Path(f"{output_dir}/form={mode}/ticker={ticker}")
-        parquet_files = list(partition_path.glob("*.parquet"))
-        skip = any(f.stat().st_size > 0 for f in parquet_files)
-        
-        if skip and not OVERWRITE_FUNDAMENTALS:  # If at least one Parquet file exists, skip
-            logger.info(f"Skipping {ticker}, Parquet file already exists at {partition_path}")
-            continue
-        
         # Metadata
-        #df_metadata = build_fiscal_metadata(ticker) 
+        df_metadata = build_fiscal_metadata(ticker) 
         
-        # Annual data
-        if mode == "10-K":       
-            df = get_company_metrics_history(ticker, filing_type="10-K")
+        # Fundamental data
+        df = get_company_metrics_history(ticker, filing_type="10-K")
         
-        # Quarterly data
-        elif mode == "10-Q":    
-            df = get_company_metrics_history(ticker, filing_type="10-Q")
-        
-        else:
-            raise KeyError(f"Argument 'mode'={mode} not in ['10-Q', '10-K'].")
-
         # Append results
-        if not df.empty:
-            dfs.append(df)
+        dfs.append(df)
         logger.info(f"{ticker} processed in {time.time() - ticker_start_time:.2f}s")
     
-    if len(dfs) > 0:
-        df = pd.concat(dfs)
-        write_partitioned_parquet(df, output_dir, partition_cols)
     logger.info(f"Total time: {time.time() - start_time:.2f}s.")

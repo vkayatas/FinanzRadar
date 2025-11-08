@@ -35,14 +35,22 @@
 
     <!-- Fundamental Tab -->
     <div v-if="activeTab === 'Fundamental'">
-      <ChartSection
-        v-for="(section, key) in filteredSectionConfigs"
-        :key="key"
-        :section="section"
-        :stock-backend-data="store.fundamentals.data"
-        :show-delta-badges="true"
-        class="mb-8"
-      />
+       <div v-if="store.fundamentals.loading" class="text-gray-500 dark:text-gray-400">
+        Loading fundamentals...
+      </div>
+      <div v-else-if="store.fundamentals.error" class="text-red-500 dark:text-red-400">
+        Error: {{ store.fundamentals.error }}
+      </div>
+      <div v-else-if="store.fundamentals.data">
+        <ChartSection
+          v-for="(section, key) in filteredSectionConfigs"
+          :key="key"
+          :section="section"
+          :stock-backend-data="store.fundamentals.data"
+          :show-delta-badges="true"
+          class="mb-8"
+        />
+      </div>
     </div>
 
     <!-- Earnings Tab -->
@@ -55,14 +63,14 @@
 
 <script setup>
 import { ref, computed } from 'vue';
+import { sectionConfigs } from "@/api/utils/chartData.js";
+import EarningsTab from '@/components/tabs/EarningsTab.vue';
 import { useStockOrchestrator } from '@/stores/stockOrchestrator';
 import ChartSection from '@/components/subcomponents/ChartSection.vue';
-import EarningsTab from '@/components/tabs/EarningsTab.vue';
-import { sectionConfigs } from "@/api/utils/chartData.js";
 
 const store = useStockOrchestrator();
 const tabs = ['Fundamental', 'Earnings', 'Overview', 'Competition'];
-const disabledTabs = ['Overview', 'Competition']; // 👈 mark tabs as future features
+const disabledTabs = ['Overview', 'Competition']; // mark tabs as future features
 const activeTab = ref('Fundamental');
 
 // computed filtered sections

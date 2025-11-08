@@ -161,3 +161,8 @@ src/
         - TODO: Deltas entfernen in earningstab pop-up und da den control fixen, dann maybe etwas leaner den modal machen bzw. arg handling im modal unsauber
         - StockAnalysis (StockAutocomplete, StockDetails, StockKPIs, ContentTabs, ChartFullscreenModal, ChartCard, ChartSections) 
         - Dont like & TODO: Charts (ka ob no touch oder?), 
+
+## 6 Data Quality Improvements
+- Description overview of all US:GAAP tags in a year: https://www.fasb.org/page/detail?pageId=/projects/FASB-Taxonomies/2025-gaap-financial-reporting-taxonomy.html
+    - With descriptions/explanations. Do keyword search and than GPT selection maybe? --> Probably dead end, but description helpful for WebApp I guess
+- Mappings between company-specific extensions and base US GAAP tags: https://xbrl.us/data-api

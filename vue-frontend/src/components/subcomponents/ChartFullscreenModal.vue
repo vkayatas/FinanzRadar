@@ -31,6 +31,7 @@
             :area-style="areaStyle"
             :hide-fullscreen-button="true"
             :showDeltaBadges="showDeltaBadges"
+            :format-currency="formatCurrency"
           >
             <component :is="chartComponent" v-bind="chartProps" class="w-full h-full" />
           </ChartCard>
@@ -69,6 +70,7 @@ const yAxisName = ref('Y_Axis')
 const xAxisType = ref('value')
 const areaStyle = ref(null)
 const showDeltaBadges = ref()
+const formatCurrency = ref()
 
 // Chart component mapping
 const chartComponent = computed(() => {
@@ -87,7 +89,8 @@ const chartProps = computed(() => ({
   xAxisName: xAxisName.value,
   yAxisName: yAxisName.value,
   xAxisType: xAxisType.value,
-  areaStyle: areaStyle.value
+  areaStyle: areaStyle.value,
+  formatCurrency: formatCurrency.value 
 }))
 
 // Open modal with full chart payload
@@ -101,6 +104,7 @@ function open(payload) {
   xAxisType.value = payload.xAxisType ?? 'value'
   areaStyle.value = payload.areaStyle ?? null
   showDeltaBadges.value = payload.showDeltaBadges 
+  formatCurrency.value = payload.formatCurrency  
   show.value = true
 }
 
