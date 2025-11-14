@@ -15,17 +15,17 @@ export const useStockOrchestrator = defineStore('stockOrchestrator', () => {
   const stockInfo = useStockInfoAndKpiStore()
 
   // track which tickers have been loaded
-  const loadedTickers = ref(new Set())
+  //const loadedTickers = ref(new Set())
 
   // internal load function
   const _loadTickerData = async (ticker) => {
-    if (loadedTickers.value.has(ticker)) return
+    //if (loadedTickers.value.has(ticker)) return
     await Promise.all([
       fundamentals.load(ticker),
       earnings.load(ticker),
       stockInfo.load(ticker)
     ])
-    loadedTickers.value.add(ticker)
+    //loadedTickers.value.add(ticker)
   }
 
   // auto-load when selectedStock changes
@@ -41,7 +41,7 @@ export const useStockOrchestrator = defineStore('stockOrchestrator', () => {
   const refreshSelectedStock = async () => {
     if (!selectedStock.value?.symbol) return
     // clear cache for this ticker
-    loadedTickers.value.delete(selectedStock.value.symbol)
+    //loadedTickers.value.delete(selectedStock.value.symbol)
     await _loadTickerData(selectedStock.value.symbol)
   }
 

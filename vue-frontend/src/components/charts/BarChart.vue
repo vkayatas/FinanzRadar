@@ -17,7 +17,7 @@ const props = defineProps({
   },
 
   yAxisName: { type: String, default: 'Value' },
-  xAxisLabel: { type: String, default: 'Category' },
+  xAxisLabel: { type: String, default: 'Date' },
   grid: { type: Object, default: () => ({ left: '10%', right: '10%', bottom: '10%' }) },
   formatCurrency: { type: String },
   barWidth: { type: String, default: '40%' } // smaller width to fit multiple bars side-by-side
@@ -33,12 +33,21 @@ const setOptions = () => {
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
-      formatter: (params) =>
-        params
-          .map(p => {
-            const value = formatCurrency(p.data, props.formatCurrency) 
-            return `${p.marker} ${p.seriesName}: ${value} <br/> ${props.xAxisLabel}: ${p.axisValue}`})
-          .join('<br/>')
+      formatter: (params) => {
+        if (!params || !params.length) return '';
+
+        // Show x-axis label once
+        const xLabelLine = `${props.xAxisLabel}: ${params[0].axisValue}`;
+
+        // Show each series' data value
+        const dataLines = params.map(p => {
+          const value = formatCurrency(p.data, props.formatCurrency);
+          return `${p.marker} ${p.seriesName}: ${value}`;
+        });
+
+        // Combine label and data
+        return `${xLabelLine}<br/>${dataLines.join('<br/>')}`;
+      },
     },
     legend: {
       top: 'top',

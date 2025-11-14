@@ -86,7 +86,6 @@ METRICS_CONCEPTS = {
     "StockBuybacks": ["PaymentsForRepurchaseOfCommonStock"], 
     "CapitalExpenditures": ["PaymentsToAcquirePropertyPlantAndEquipment", "PaymentsToAcquireProductiveAssets"], # "PaymentsToAcquireProductiveAssets", "CapitalExpenditures"
     "InterestExpense": ["InterestExpense"]
-    #"InterestPaid": ["CashPaidForInterest"], #TODO: Unsure and unnecessary
 }
 
 YFINANCE_METRICS = {

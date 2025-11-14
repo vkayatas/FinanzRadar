@@ -1,7 +1,13 @@
 <template>
   <!-- Main grid: responsive -->
-  <div>
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 ">
+  <div v-if="store.selectedStock">
+      <div v-if="store.earnings.loading" class="text-gray-500 dark:text-gray-400">
+        Loading Earnings...
+      </div>
+      <div v-else-if="store.earnings.error" class="text-red-500 dark:text-red-400">
+        Error: {{ store.earnings.error }}
+      </div>
+    <div v-else-if="store.earnings" class="grid grid-cols-1 lg:grid-cols-5 gap-4 ">
       
       <!-- Left Column: DataTable (60% on lg, full width on sm) -->
     <div class="lg:col-span-3 bg-white dark:bg-gray-800 rounded-lg shadow p-4">
@@ -38,13 +44,10 @@
           </div>
 
           <dl class="grid grid-cols-1 gap-y-2 text-sm">
-            <div class="flex items-center justify-between">
-              <dt class="font-medium text-gray-600 dark:text-gray-400">Revenue Estimate</dt>
-              <dd class="font-semibold text-gray-900 dark:text-gray-100">{{ formatCurrency(store.earnings.nextEarnings.revenueEstimate) }}</dd>
-            </div>
+   
             <div class="flex items-center justify-between">
               <dt class="font-medium text-gray-600 dark:text-gray-400">EPS Estimate</dt>
-              <dd class="font-semibold text-gray-900 dark:text-gray-100">{{ formatDelta(store.earnings.nextEarnings.epsEstimate) }}</dd>
+              <dd class="font-semibold text-gray-900 dark:text-gray-100">{{ formatCurrency(store.earnings.nextEarnings.epsEstimate) }}</dd>
             </div>
             <div class="flex items-center justify-between">
               <dt class="font-medium text-gray-600 dark:text-gray-400">Dividend Ex-Date</dt>
@@ -71,7 +74,7 @@
         <div class="bg-white dark:bg-gray-800 p-4 rounded-lg w-full">
           <ChartSection
             :section="section"
-            :stock-backend-data="mockScatterData"
+            :stock-backend-data="store.earnings.scatterSeries"
             :show-delta-badges="false"
             class="mb-8"
           />
@@ -106,33 +109,4 @@ const section = {
       { title: 'Recent Earnings', chartType: 'scatter', metric: 'earningsHistoryScatter', xAxisName: 'Quarters', yAxisName: 'EPS', xAxisType: 'category'}
     ]
   };
-const mockScatterData = {
-  metrics: {
-    earningsHistoryScatter: [
-      { 
-        name: 'EPS',
-        color: '#4F46E5',
-        data: [
-          ['2024 Q1', 20],
-          ['2024 Q2', 35],
-          ['2024 Q3', 40],
-          ['2024 Q4', 60],
-          ['2025 Q1', 70]
-        ]
-      },
-      {
-        name: 'EPS Estimate',
-        color: '#10B981',
-        data: [
-          ['2024 Q1', 25],
-          ['2024 Q2', 38],
-          ['2024 Q3', 55],
-          ['2024 Q4', 65],
-          ['2025 Q1', 80]
-        ]
-      }
-    ]
-  }
-};
-
 </script>

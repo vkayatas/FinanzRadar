@@ -32,7 +32,7 @@ export const sectionConfigs = {
         title: "Cash Flow Growth", chartType: "line", yAxisName: "FCF ($M)"},
       { metric: "SharesOutstanding", color: "#10B981", title: "Shares Outstanding", chartType: "bar", yAxisName: "Shares", formatCurrency: ""},
       { metric: "StockBuybacks", color: "#EF4444", title: "Repurchase of Common Stock", chartType: "bar", yAxisName: "Repurchase ($M)" },
-      { metric: "DividendsPaid", color: "#6366F1", title: "Dividend and Dividend Yield", chartType: "area", yAxisName: "Dividend ($)" }
+      { metric: "DividendsPaid", color: "#6366F1", title: "Dividend and Dividend Yield", chartType: "line", yAxisName: "Dividend ($)" }
     ]
   },
   profitability: {
@@ -43,14 +43,14 @@ export const sectionConfigs = {
           { metric: "OperatingMargin", color: "#F59E0B" },
           { metric: "ProfitMargin", color: "#EF4444" }
         ],
-        title: "Margins", chartType: "line", yAxisName: "Margins (%)"
+        title: "Margins", chartType: "line", yAxisName: "Margins (%)", formatCurrency: ""
       },
       { metrics: [
           { metric: "ROCE", color: "#6366F1" },
           { metric: "ROE", color: "#10B981" },
           { metric: "ROA", color: "#F59E0B" }
         ],
-        title: "Return on Capital Employed, Equity & Assets", chartType: "line", yAxisName: "Ratio (%)"
+        title: "Return on Capital Employed, Equity & Assets", chartType: "line", yAxisName: "Ratio (%)", formatCurrency: ""
       }
     ]
   },
@@ -68,7 +68,7 @@ export const sectionConfigs = {
           { metric: "InterestCoverage", color: "#F59E0B" },
           { metric: "NetDebtToEBITDA", color: "#EF4444" }
         ],
-        title: "Debt Indicators", chartType: "line", yAxisName: "Ratio"
+        title: "Debt Indicators", chartType: "line", yAxisName: "Ratio", formatCurrency: ""
       },
       { metrics: [
           { metric: "TotalAssets", color: "#10B981" },
@@ -85,14 +85,14 @@ export const sectionConfigs = {
           { metric: "FCFYield", color: "#6366F1" },
           { metric: "SBCAdjustedFCFYield", color: "#EF4444" }
         ],
-        title: "Free Cash Flow Yield [%]", chartType: "line", yAxisName: "FCF Yield (%)"
+        title: "Free Cash Flow Yield [%]", chartType: "line", yAxisName: "FCF Yield (%)", formatCurrency: ""
       },
       { metric: "PERatio", color: "#10B981", title: "P/E Ratio", chartType: "line", yAxisName: "P/E Ratio" },
       { metrics: [
           { metric: "EVToEBITDA", color: "#F59E0B" },
           { metric: "PriceToBook", color: "#6366F1" }
         ],
-        title: "Fundamental Valuation Indicators", chartType: "line", yAxisName: "Ratio"
+        title: "Fundamental Valuation Indicators", chartType: "line", yAxisName: "Ratio", formatCurrency: ""
       }
     ]
   }
@@ -165,35 +165,49 @@ export function toEchartsDataFormat(data, title = 'Default Series', colors = def
 
   return [];
 }
-
 /**
- * Computes year-over-year (or N-year) percent deltas
+ * Computes year-over-year (or N-year) compound annual growth rates (CAGR),
+ * rounded to 1 decimal.
+ *
  * @param {number[]} data - numeric array (e.g., revenue per year)
  * @param {Array<string|number>} labels - array of years or timestamps
  * @returns {Object} { '1Y': {percent}, '3Y': {percent}, '5Y': {percent}, 'All': {percent} }
  */
 export function computeDeltas(data, labels) {
-  if (!data || data.length === 0) return {};
+  if (!data || data.length < 2) return {};
 
   const years = labels.map(l =>
     typeof l === 'number' ? l : new Date(l).getFullYear()
   );
-  const result = {};
 
-  const delta = numYears => {
-    if (years.length < numYears + 1) return null;
-    const startIndex = years.length - numYears - 1;
-    const endIndex = years.length - 1;
-    if (startIndex < 0) return null;
-    const startValue = data[startIndex];
-    const endValue = data[endIndex];
-    if (startValue == null || endValue == null) return null;
-    return ((endValue - startValue) / startValue) * 100;
+  const result = {};
+  const deltaTimeRanges = ['1Y', '3Y', '5Y', 'All'];
+
+  const cagr = (startValue, endValue, yearsCount) => {
+    if (!startValue || !endValue || yearsCount <= 0) return null;
+    const rate = Math.pow(endValue / startValue, 1 / yearsCount) - 1;
+    return Math.round(rate * 1000) / 10; // percent, 1 decimal
   };
 
   deltaTimeRanges.forEach(label => {
-    const numYears = label === 'All' ? years.length - 1 : parseInt(label);
-    result[label] = { percent: delta(numYears) };
+    const numYears = label === 'All' ? years[years.length - 1] - years[0] : parseInt(label);
+    if (numYears == null || isNaN(numYears)) return;
+
+    if (years.length < 2) {
+      result[label] = { percent: null };
+      return;
+    }
+
+    const endIndex = years.length - 1;
+    const startIndex = years.findIndex(y => y === years[endIndex] - numYears);
+    if (startIndex === -1) {
+      result[label] = { percent: null };
+      return;
+    }
+
+    const startValue = data[startIndex];
+    const endValue = data[endIndex];
+    result[label] = { percent: cagr(startValue, endValue, numYears) };
   });
 
   return result;

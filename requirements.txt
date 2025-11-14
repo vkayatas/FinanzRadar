@@ -3,7 +3,4 @@ yfinance
 pandas
 requests
 uvicorn
-lxml
-sec-api
-beautifulsoup4
-
+coloredlogs

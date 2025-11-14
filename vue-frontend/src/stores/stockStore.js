@@ -1,7 +1,7 @@
 // /stores/stockAnalysisStore.js
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import tickerSearch from '@/assets/tickerSearch.json'
+import tickerSearchUS from '@/assets/tickerSearchUS.json'
 import tickerSearchPopular from '@/assets/tickerSearchPopular.json'
 
 //Fundamental Tab Data 
@@ -479,7 +479,7 @@ const nextEarningsMock = {
 export const useStockAnalysisStore = defineStore('stockAnalysis', () => {
     //1) Autocomplete
     // Main stock list
-    const stocksList =  ref(tickerSearch)
+    const stocksList =  ref(tickerSearchUS)
     const popularStocks = ref(tickerSearchPopular)
 
     // Currently selected stock

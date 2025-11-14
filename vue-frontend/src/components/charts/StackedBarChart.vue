@@ -11,7 +11,7 @@ const props = defineProps({
   labels: { type: Array, default: () => [] },
   series: { type: Array, default: () => [] }, // [{ name, data, color }]
   yAxisName: { type: String, default: 'Value' },
-  xAxisLabel: { type: String, default: 'Category' }
+  xAxisLabel: { type: String, default: 'Date' }
 });
 
 const chartRef = ref(null);
@@ -24,8 +24,21 @@ const setOptions = () => {
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
-      formatter: (params) =>
-        params.map(p => `${p.marker} ${p.seriesName}: ${formatCurrency(p.data)} <br/> ${props.xAxisLabel}: ${p.axisValue}`).join('<br/>')
+      formatter: (params) => {
+        if (!params || !params.length) return '';
+
+        // Show x-axis label once
+        const xLabelLine = `${props.xAxisLabel}: ${params[0].axisValue}`;
+
+        // Show each series' data value
+        const dataLines = params.map(p => {
+          const value = formatCurrency(p.data, props.formatCurrency);
+          return `${p.marker} ${p.seriesName}: ${value}`;
+        });
+
+        // Combine label and data
+        return `${xLabelLine}<br/>${dataLines.join('<br/>')}`;
+      },
     },
     legend: {
       top: 'top',

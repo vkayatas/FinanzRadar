@@ -4,9 +4,10 @@ import pandas as pd
 from typing import Optional
 from functools import lru_cache
 
-from utils.config import CACHE_SIZE, HEADERS
+from utils.config.logging import init_logger
+from utils.config.config import CACHE_SIZE, HEADERS
 
-
+logger = init_logger(name=__name__, level="INFO", log_file="logs/app.log")
 
 def safe_request(url: str, retries: int = 3, backoff: float = 0.5) -> Optional[dict]:
     for attempt in range(retries):
@@ -15,7 +16,8 @@ def safe_request(url: str, retries: int = 3, backoff: float = 0.5) -> Optional[d
             if r.status_code == 200:
                 return r.json()
         except requests.exceptions.RequestException as e:
-            print(f"Request failed ({attempt+1}/{retries}): {e}")
+            logger.warning(f"Request failed ({attempt+1}/{retries}): {e}")
+
         time.sleep(backoff * (2 ** attempt))  # exponential backoff
     return None
 
@@ -47,11 +49,14 @@ def build_fiscal_metadata(ticker: str, filing_types: tuple = ("10-K", "10-Q")) -
     # Step 1: Get CIK and SEC data
     cik = get_cik_from_ticker(ticker)
     data = get_sec_submissions(cik)
-
-    forms = data['filings']['recent']['form']
-    report_dates = data['filings']['recent']['reportDate']
-    filing_dates = data['filings']['recent']['filingDate']
-    accession_numbers = data['filings']['recent']['accessionNumber']
+    try:
+        forms = data['filings']['recent']['form']
+        report_dates = data['filings']['recent']['reportDate']
+        filing_dates = data['filings']['recent']['filingDate']
+        accession_numbers = data['filings']['recent']['accessionNumber']
+    except KeyError:
+        logger.warning(f"No SEC data for ticker='{ticker}'. Skip data fetching...")
+        return(pd.DataFrame())
 
     # Step 2: collect all 10-K and 10-Q filings
     all_reports = []

@@ -427,34 +427,6 @@ export const earningsCallsMock = [
 
 export const earningsScatterSeriesMock = [
   {
-    name: 'Revenue',
-    data: [
-      ["2025 Q1", 120],
-      ["2025 Q2", 130],
-      ["2025 Q3", 125],
-      ["2025 Q4", 140],
-      ["2026 Q1", 145],
-      ["2026 Q2", 138],
-      ["2026 Q3", 150],
-      ["2026 Q4", 155]
-    ],
-    color: '#4F46E5'
-  },
-  {
-    name: 'Revenue Actual',
-    data: [
-      ["2025 Q1", 115],
-      ["2025 Q2", 135],
-      ["2025 Q3", 130],
-      ["2025 Q4", 138],
-      ["2026 Q1", 150],
-      ["2026 Q2", 140],
-      ["2026 Q3", 155],
-      ["2026 Q4", 158]
-    ],
-    color: '#10B981'
-  },
-  {
     name: 'EPS Estimate',
     data: [
       ["2025 Q1", 1.2],
@@ -466,10 +438,10 @@ export const earningsScatterSeriesMock = [
       ["2026 Q3", 1.50],
       ["2026 Q4", 1.55]
     ],
-    color: '#F59E0B'
+    color: '#10B981'
   },
   {
-    name: 'EPS Actual',
+    name: 'EPS Reported',
     data: [
       ["2025 Q1", 1.15],
       ["2025 Q2", 1.35],
@@ -480,7 +452,7 @@ export const earningsScatterSeriesMock = [
       ["2026 Q3", 1.53],
       ["2026 Q4", 1.58]
     ],
-    color: '#EF4444'
+    color: '#4F46E5'
   }
 ]
 

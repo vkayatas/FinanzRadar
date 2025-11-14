@@ -1,13 +1,14 @@
 import numpy as np
 import pandas as pd
-import yfinance as yf
-from datetime import datetime, timezone
 from pandas.api.types import is_numeric_dtype
 
-from radar.utils.config.config import METRICS_CONCEPTS_OLD
-from utils.yahoo_fundamentals import fetch_financials
+from utils.config.logging import init_logger
+from utils.config.config import METRICS_CONCEPTS_OLD
+from backend.parsers.yahoo_processing import fetch_financials
 from main_update_database import get_company_metrics_history, _get_us_gaap_metrics_for_ticker
 
+# Initialize logger
+logger = init_logger(name=__name__, level="INFO", log_file="logs/app.log")
 
 def _make_slices_softmatch(yf_df: pd.DataFrame, sec_df: pd.DataFrame, max_rows=None, tolerance_days: int = 30):
     """
@@ -211,20 +212,20 @@ if __name__ == "__main__":
     tickers = ["V"] # ["AAPL", "NVDA", "MSFT", "AMZN", "V", "FICO", "ADBE", "ANET", "GOOGL"]
     
     for symbol in tickers:        
-        print("Fetching YFinance data...")
+        logger.info(f"[{symbol}] Fetching from YFinance data...")
         df_yf = fetch_financials(symbol, quarterly=(filing_type=="10-Q"))
 
-        print("Fetching SEC EDGAR data...")
+        logger.info(f"[{symbol}] Fetching from SEC EDGAR data...")
         df_sec = get_company_metrics_history(symbol, filing_type=filing_type)
 
-        print("Comparing datasets...")
+        logger.info(f"[{symbol}] Compared SEC with Yahoo")
         comparison_report = compare_yfinance_to_sec_extended(df_yf, df_sec)
         helper_df = mismatches_helper(df_yf, df_sec, comparison_report)
         
-        print("Search better metric...")
+        logger.info(f"[{symbol}] Searching better metric...")
         #sec_preprocessed = _get_us_gaap_metrics_for_ticker(symbol, filing_type=filing_type)
-        metrics_map = map_yf_to_sec_metrics(yf_df=df_yf, sec_preprocessed=sec_preprocessed, helper_df=helper_df, candidates=METRICS_CONCEPTS_OLD)
-    a=0
+        metrics_map = map_yf_to_sec_metrics(yf_df=df_yf, sec_preprocessed=df_sec, helper_df=helper_df, candidates=METRICS_CONCEPTS_OLD)
+        logger.info(f"[{symbol}] Finished better metric search")
 
 # TODO: Calc GrossProfit if not exist as Revenue - COGS, Example AMZN
 # TODO: For McDonalds shares outstanding issues. Need to multiply with 1mio...

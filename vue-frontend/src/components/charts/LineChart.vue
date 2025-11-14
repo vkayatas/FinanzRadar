@@ -5,6 +5,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import * as echarts from 'echarts'
+import { formatCurrency } from '@/api/utils/mathUtils.js'
 
 const props = defineProps({
   labels: { type: Array, default: () => [] },
@@ -15,8 +16,9 @@ const props = defineProps({
     ]
   },
   yAxisName: { type: String, default: 'Value' },
-  xAxisLabel: { type: String, default: 'X' },
+  xAxisLabel: { type: String, default: 'Date' },
   smooth: { type: Boolean, default: true },
+  formatCurrency: { type: String },
   areaStyle: { type: Boolean, default: false } // <- optional boolean
 })
 
@@ -29,8 +31,21 @@ const setOptions = () => {
   chartInstance.setOption({
     tooltip: {
       trigger: 'axis',
-      formatter: (params) =>
-        params.map(p => `${p.marker} ${p.seriesName}: ${p.data} <br/> ${props.xAxisLabel}: ${p.axisValue}`).join('<br/>')
+      formatter: (params) => {
+        if (!params || !params.length) return '';
+
+        // Show x-axis label once
+        const xLabelLine = `${props.xAxisLabel}: ${params[0].axisValue}`;
+
+        // Show each series' data value
+        const dataLines = params.map(p => {
+          const value = formatCurrency(p.data, props.formatCurrency);
+          return `${p.marker} ${p.seriesName}: ${value}`;
+        });
+
+        // Combine label and data
+        return `${xLabelLine}<br/>${dataLines.join('<br/>')}`;
+      },
     },
     legend: {
       top: 'top',

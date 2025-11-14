@@ -18,6 +18,8 @@
 </template>
 
 <script setup>
+  import {formatCurrency} from '@/api/utils/mathUtils.js'
+
   defineProps({
     title: { type: String, required: true },
     kpis: { type: Array, required: true }

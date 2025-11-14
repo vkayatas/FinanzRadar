@@ -16,7 +16,7 @@ export const useFundamentalStore = defineStore("fundamentals", () => {
 
   const load = async (ticker) => {
     ticker = ticker.toUpperCase();
-    if (loadedTickers.value.has(ticker)) return; // ✅ cache hit
+    //if (loadedTickers.value.has(ticker)) return; // ✅ cache hit
 
     loading.value = true;
     error.value = null;
@@ -31,7 +31,7 @@ export const useFundamentalStore = defineStore("fundamentals", () => {
         fundamentals = await fetchFundamentals(ticker, DEFAULT_FORM_TYPE);
       }
       data.value = fundamentals;
-      loadedTickers.value.add(ticker);
+      //loadedTickers.value.add(ticker);
     } catch (err) {
       console.error("Error loading fundamentals:", err);
       error.value = err.message;
