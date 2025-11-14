@@ -7,8 +7,8 @@ from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor, as_completed, ThreadPoolExecutor
 
 from parsers.sec import SecProcessing
-from parsers.yahoo_processing import YahooProcessing 
 from utils.config.logging import init_logger
+from parsers.yahoo_processing import YahooProcessing 
 from utils.pandas_utils import write_ticker_partitioned_parquet
 
 # Initialize logger
@@ -28,7 +28,7 @@ def fetch_ticker(key:str, ticker, fetch_fn, output_dir, overwrite, filing_type, 
     try:
         result = fetch_fn(ticker, filing_type=filing_type) if filing_type else fetch_fn(ticker)
     except Exception as e:
-        logger.error(f"{ticker} fetch failed: {e}")
+        logger.error(f"{ticker} fetch failed: {e}", exc_info=True)
         return None
         
     if result is not None:
@@ -74,7 +74,12 @@ def fetch_all(key, tickers, fetch_fn, output_dir, partition_cols, max_workers=1,
                 tqdm.write(f"❌ Error: {ticker} — {e}")
 
     logger.info(f"✅ Finished fetching {len(tickers)} tickers for {output_dir.name}")
-        
+
+def _load_tickers_list_from_json(dir:str, file_nm:str):
+    with open(dir / file_nm) as f:
+        tickers = json.load(f)
+    return list(tickers.keys())
+ 
 def _init_data_source_config(config_path:str):
     data_sources = []
     sec = SecProcessing()
@@ -84,7 +89,7 @@ def _init_data_source_config(config_path:str):
     config_path = Path(config_path)
     with open(config_path) as f:
         config = json.load(f)
-    tickers = config.get("tickers", [])
+    tickers = _load_tickers_list_from_json(dir=config_path.parent, file_nm="tickers.json")
 
     # Step 2: Map config keys to fetch functions
     FETCH_FN_MAP = {
@@ -123,7 +128,7 @@ def _init_data_source_config(config_path:str):
     return data_sources
 
 if __name__ == "__main__":
-    config_path = "finanzradar/utils/config/financial_data_config.json"
+    config_path = "backend/utils/config/fundamentals_config.json"
                 
     # Build data_sources dynamically from config
     data_sources = _init_data_source_config(config_path)

@@ -25,7 +25,7 @@ def init_logger(name: str = __name__, level: str = "INFO", log_file: str = None)
     coloredlogs.install(
         level=level.upper(),
         logger=logger,
-        fmt='%(asctime)s [%(levelname)s] [%(filename)s] %(message)s',
+        fmt='%(asctime)s [%(levelname)s] [%(filename)s:%(funcName)s] %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S',
     )
 

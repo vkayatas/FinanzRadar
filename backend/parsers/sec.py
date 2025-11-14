@@ -28,8 +28,9 @@ class SecProcessing:
 
         # Step 2: Fetch SEC GAAP data
         sec_data = get_all_us_gaap_data(cik)
-        if not sec_data:
-            raise RuntimeError(f"Failed to fetch GAAP sec_data for {ticker}")
+        if sec_data is None:
+            logger.warning(f"Failed to fetch GAAP sec_data for {ticker}")
+            return pd.DataFrame()
         
         # Step 2.1: Keep only relevant us:gaap metrics 
         if not sec_data.get("facts", {}).get("us-gaap"):
@@ -285,7 +286,9 @@ class SecProcessing:
 
             # Apply vectorized computation
             try:
-                df[result_col] = func(*[df[c] for c in cols]).round(2)
+                df[result_col] = func(*[df[c] for c in cols])
+                if isinstance(df[result_col], pd.Series) and pd.api.types.is_numeric_dtype(df[result_col]):
+                    df[result_col] = df[result_col].round(2)
             except Exception as e:
                 raise TypeError(
                     f"Custom metric '{result_col}' failed during vectorized computation: {e}\n"

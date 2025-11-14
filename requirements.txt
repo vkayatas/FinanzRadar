@@ -1,6 +1,9 @@
+lxml
+tqdm
+pandas
 fastapi
 yfinance
-pandas
-requests
+pyarrow
 uvicorn
+requests
 coloredlogs

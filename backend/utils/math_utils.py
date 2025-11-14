@@ -7,6 +7,69 @@ from utils.config.logging import init_logger
 # Initialize logger
 logger = init_logger(name=__name__, level="DEBUG", log_file="logs/app.log")
 
+def safe_round(value, ndigits=2, default=None):
+    """
+    Round only if value is a real number. 
+    If None or NaN → return default.
+    """
+    if value is None:
+        return default
+    if isinstance(value, float) and pd.isna(value):
+        return default
+
+    try:
+        return round(value, ndigits)
+    except Exception:
+        return default
+    
+def safe_get(data, key, index=None):
+    if data is None:
+        return None
+    
+    val = data.get(key)
+
+    # Missing key or explicit None
+    if val is None:
+        return None
+
+    # Handle pandas NA float
+    if isinstance(val, float) and pd.isna(val):
+        return None
+
+    # If iloc is requested and the value supports iloc
+    if index is not None:
+        try:
+            # Supports iloc and has enough length 
+            return val.iloc[index]
+        except Exception:
+            return None
+
+    # No iloc requested → return directly
+    return val
+
+def ratio(a, b, ndigits=2):
+    # Reject None
+    if a is None or b is None:
+        return None
+
+    # Reject NaN
+    if (isinstance(a, float) and pd.isna(a)) or (isinstance(b, float) and pd.isna(b)):
+        return None
+
+    # Reject zero denominator
+    try:
+        if float(b) == 0:
+            return None
+    except Exception:
+        return None
+
+    # Try the division
+    try:
+        value = float(a) / float(b)
+        return round(value, ndigits)
+    except Exception:
+        return None
+        
 def format_currency(value, symbol: str = "$", locale_str: str = "en_US") -> str:
     """
     Format numbers as USD/EUR-style currency, localized and compact (K, M, B, T).

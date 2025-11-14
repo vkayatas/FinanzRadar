@@ -1,6 +1,7 @@
 node_modules/
 corprootCA.crt
 backend/featurestore
+sec_cache/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

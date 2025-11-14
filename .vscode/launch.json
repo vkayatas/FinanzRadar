@@ -14,8 +14,7 @@
             "name": "Python: FastAPI",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/backend/main.py",
-            "python": "C:/Code/finanz_radar_venv/Scripts/python.exe",  
+            "program": "${workspaceFolder}/backend/main.py",  
             "args": [
                 "-m", "uvicorn",
                 "main:app", 
@@ -37,7 +36,6 @@
             "env": {},
             "envFile": "${workspaceFolder}/.env",
             "justMyCode": true,
-            "python": "C:/Code/finanz_radar_venv/Scripts/python.exe"
-          },
+        },
     ]
 }

@@ -3,10 +3,10 @@ import pandas as pd
 import yfinance as yf
 from datetime import datetime, timezone
 
-from utils.math_utils import safe_dt
-from utils.date_utils import safe_strftime
+from utils.pandas_utils import safe_scalar, perf
 from utils.config.logging import init_logger
-from utils.pandas_utils import safe_scalar, safe_dt
+from utils.date_utils import safe_dt, safe_strftime, _dates_to_quarters
+from utils.math_utils import safe_get, ratio, safe_round
 
 # Initialize logger
 logger = init_logger(name=__name__, level="INFO", log_file="logs/app.log")
@@ -49,6 +49,8 @@ YFINANCE_METRICS = {
     "FreeCashFlow": ["Free Cash Flow"],  # if you want to add
 }
 
+DEFAULT_TAX_RATE = 0.21
+
 class YahooProcessing:
     def _align_previous_available_dates(self, dates: pd.DatetimeIndex, source_index: pd.DatetimeIndex):
         dates = pd.to_datetime(dates).values.astype("datetime64[ns]")
@@ -70,6 +72,9 @@ class YahooProcessing:
 
         # Shares
         shares_outstanding = ticker.get_shares_full(start=start_date - pd.DateOffset(years=1))
+        if shares_outstanding is None:
+            return pd.Series()
+        
         shares_outstanding.index = shares_outstanding.index.tz_localize(None)
         shares_outstanding = shares_outstanding[~shares_outstanding.index.duplicated()]
 
@@ -87,34 +92,6 @@ class YahooProcessing:
         market_cap =  pd.Series(prices_aligned * shares_aligned, index=dates, name="MarketCap").astype("int")
 
         return market_cap
-
-    def _dates_to_quarters(self, dates: pd.Series, quarterly:bool) -> pd.Series:
-        dates = pd.to_datetime(dates)
-
-        if not quarterly:
-            return dates.dt.year.map(lambda y: f"CY{y}")
-            # # Annual reports: map to nearest year-end
-            # def nearest_year(dt):
-            #     dec31 = pd.Timestamp(year=dt.year, month=12, day=31)
-            #     # if date is closer to previous year's Dec 31, subtract 1
-            #     return f"CY{dt.year - 1}" if (dt - dec31).days < -183 else f"CY{dt.year}"
-
-            # return dates.apply(nearest_year)
-        
-        else:
-            # Quarterly reports: map to nearest canonical quarter end
-            def nearest_quarter(dt):
-                year = dt.year
-                quarters = {
-                    pd.Timestamp(f"{year}-03-31"): f"CY{year}Q1",
-                    pd.Timestamp(f"{year}-06-30"): f"CY{year}Q2",
-                    pd.Timestamp(f"{year}-09-30"): f"CY{year}Q3",
-                    pd.Timestamp(f"{year}-12-31"): f"CY{year}Q4",
-                }
-                nearest = min(quarters.keys(), key=lambda x: abs(x - dt))
-                return quarters[nearest]
-            
-            return dates.apply(nearest_quarter)
 
     def fetch_financials(self, symbol: str, quarterly: bool = False) -> pd.DataFrame:
         ticker = yf.Ticker(symbol)
@@ -153,7 +130,7 @@ class YahooProcessing:
         df["end"] = df.index
         df["ticker"] = symbol
         df["form"] = "10-Q" if quarterly else "10-K"
-        df["frame"] = self._dates_to_quarters(df["end"], quarterly=quarterly)
+        df["frame"] = _dates_to_quarters(df["end"], quarterly=quarterly)
         
         # Data cleaning
         for col in ["StockBuybacks", "CapitalExpenditures", "DividendsPaid"]:
@@ -171,77 +148,40 @@ class YahooProcessing:
 
         # Get current data
         info = ticker.info
-        current_price = hist['Close'].iloc[-1]
-        prev_close = hist['Close'].iloc[-2]
-        abs_change = round(current_price - prev_close, 2)
-        rel_change = round((abs_change / prev_close) * 100, 2)
-
-        # Helper to compute change over period
-        def perf(period):
-            today = hist.index[-1]
-
-            if period == "1M":
-                target_date = today - pd.DateOffset(months=1)
-            elif period == "YTD":
-                start = datetime(today.year, 1, 1, tzinfo=timezone.utc)
-                # pick first available price on/after Jan 1
-                ytd_data = hist.loc[hist.index >= start]
-                if ytd_data.empty:
-                    return None
-                price_then = ytd_data['Close'].iloc[0]
-                return {
-                    "relStockPriceChange": round((current_price - price_then) / price_then * 100, 2),
-                    "absStockPriceChange": round(current_price - price_then, 2),
-                }
-            elif period == "1Y":
-                target_date = today - pd.DateOffset(years=1)
-            elif period == "3Y":
-                target_date = today - pd.DateOffset(years=3)
-            elif period == "5Y":
-                target_date = today - pd.DateOffset(years=5)
-            else:
-                return None
-
-            # Find closest trading day on or before target_date
-            past_data = hist.loc[hist.index <= target_date]
-            if past_data.empty:
-                return None
-            past_price = past_data['Close'].iloc[-1]
-
-            return {
-                "relStockPriceChange": round((current_price - past_price) / past_price * 100, 2),
-                "absStockPriceChange": round(current_price - past_price, 2),
-            }
+        current_price = safe_get(hist, "Close", index=-1)
+        prev_close = safe_get(hist, "Close", index=-2)
+        abs_change = safe_round(current_price - prev_close, 2)
+        rel_change = safe_round((abs_change / prev_close) * 100, 2)
 
         # Fetch stock performance delta values
-        perf_1M = perf("1M")
-        perf_YTD = perf("YTD")
-        perf_1Y = perf("1Y")
-        perf_3Y = perf("3Y")
-        perf_5Y = perf("5Y")
+        perf_1M = perf(hist, current_price, period="1M", prefix="StockPriceChange")
+        perf_YTD = perf(hist, current_price, period="YTD", prefix="StockPriceChange")
+        perf_1Y = perf(hist, current_price, period="1Y", prefix="StockPriceChange")
+        perf_3Y = perf(hist, current_price, period="3Y", prefix="StockPriceChange")
+        perf_5Y = perf(hist, current_price, period="5Y", prefix="StockPriceChange")
 
         # Build data struct
         data = {
-            "currentPrice": round(current_price, 2),
+            "currentPrice": safe_round(current_price, 2),
             "relChange": rel_change,
             "absChange": abs_change,
             "lastUpdated": datetime.now(timezone.utc).isoformat(),
             
             # Unpack performance dicts into separate keys
-            "performance_1M_rel": perf_1M.get("relStockPriceChange", None),
-            "performance_1M_abs": perf_1M.get("absStockPriceChange", None),
+            "performance_1M_rel": safe_get(perf_1M, "relStockPriceChange"),
+            "performance_1M_abs": safe_get(perf_1M, "absStockPriceChange"),
             
-            "performance_YTD_rel": perf_YTD.get("relStockPriceChange", None),
-            "performance_YTD_abs": perf_YTD.get("absStockPriceChange", None),
+            "performance_YTD_rel": safe_get(perf_YTD, "relStockPriceChange"),
+            "performance_YTD_abs": safe_get(perf_YTD, "absStockPriceChange"),
             
-            "performance_1Y_rel": perf_1Y.get("relStockPriceChange", None),
-            "performance_1Y_abs": perf_1Y.get("absStockPriceChange", None),
+            "performance_1Y_rel": safe_get(perf_1Y, "relStockPriceChange"),
+            "performance_1Y_abs": safe_get(perf_1Y, "absStockPriceChange"),
             
-            "performance_3Y_rel": perf_3Y.get("relStockPriceChange", None),
-            "performance_3Y_abs": perf_3Y.get("absStockPriceChange", None),
+            "performance_3Y_rel": safe_get(perf_3Y, "relStockPriceChange"),
+            "performance_3Y_abs": safe_get(perf_3Y, "absStockPriceChange"),
             
-            "performance_5Y_rel": perf_5Y.get("relStockPriceChange", None),
-            "performance_5Y_abs": perf_5Y.get("absStockPriceChange", None),
+            "performance_5Y_rel": safe_get(perf_5Y, "relStockPriceChange"),
+            "performance_5Y_abs": safe_get(perf_5Y, "absStockPriceChange"),
             
             "ticker": symbol,
             "industry": info.get("industry", "N/A"),
@@ -254,33 +194,26 @@ class YahooProcessing:
     def build_stock_kpi_dataframe(self, symbol: str):
         ticker = yf.Ticker(symbol)
         info = ticker.info
-        financials = ticker.financials
-        balance_sheet = ticker.balance_sheet
-        
-        def safe_get(key):
-            val = info.get(key)
-            return None if val is None or (isinstance(val, float) and pd.isna(val)) else val
-
-        def ratio(a, b):
-            return round(a / b, 2) if a and b and b != 0 else None
+        financials = ticker.financials.T
+        balance_sheet = ticker.balance_sheet.T
 
         # === VALUATION ===
-        market_cap = safe_get("marketCap")
-        trailing_pe = safe_get("trailingPE")
-        forward_pe = safe_get("forwardPE")
-        pb = safe_get("priceToBook")
-        ps = safe_get("priceToSalesTrailing12Months")
-        ev_ebitda = safe_get("enterpriseToEbitda")
+        market_cap = safe_get(info, "marketCap")
+        trailing_pe = safe_get(info, "trailingPE")
+        forward_pe = safe_get(info, "forwardPE")
+        pb = safe_get(info, "priceToBook")
+        ps = safe_get(info, "priceToSalesTrailing12Months")
+        ev_ebitda = safe_get(info, "enterpriseToEbitda")
 
         # === CASH FLOW ===
-        total_cash = safe_get("totalCash")
-        total_debt = safe_get("totalDebt")
-        free_cashflow = safe_get("freeCashflow")
+        total_cash = safe_get(info, "totalCash")
+        total_debt = safe_get(info, "totalDebt")
+        free_cashflow = safe_get(info, "freeCashflow")
 
         # === MARGINS ===
-        gross_margin = safe_get("grossMargins")
-        op_margin = safe_get("operatingMargins")
-        net_margin = safe_get("profitMargins")
+        gross_margin = safe_get(info, "grossMargins")
+        op_margin = safe_get(info, "operatingMargins")
+        net_margin = safe_get(info, "profitMargins")
 
         # Convert to percentages
         gross_margin = gross_margin * 100 if gross_margin is not None else None
@@ -288,33 +221,39 @@ class YahooProcessing:
         net_margin = net_margin * 100 if net_margin is not None else None
 
         # === GROWTH ===
-        revenue_growth = safe_get("revenueGrowth")
-        earnings_growth = safe_get("earningsGrowth")
+        revenue_growth = safe_get(info, "revenueGrowth")
+        earnings_growth = safe_get(info, "earningsGrowth")
         
         # ROCE = EBIT / (Total Assets - Current Liabilities) * 100
-        ebit = financials.loc['EBIT'].iloc[0]         
-        total_assets = balance_sheet.loc['Total Assets'].iloc[0]
-        current_liabilities = balance_sheet.loc['Current Liabilities'].iloc[0]
+        ebit = safe_get(financials, "EBIT", index=0)         
+        total_assets = safe_get(balance_sheet, "Total Assets", index=0)
+        current_liabilities = safe_get(balance_sheet, "Current Liabilities", index=0) 
 
-        roce = (ebit / (total_assets - current_liabilities)) * 100
+        if total_assets is None or current_liabilities is None or ebit is None:
+            roce = None
+        else:
+            roce = (ebit / (total_assets - current_liabilities)) * 100
 
         # ROIC = NOPAT / (Total Debt + Total Equity) * 100, with NOPAT ≈ EBIT*(1-tax_rate)
-        tax_rate = 0.21  # approximate if info not available
+        tax_rate = safe_get(financials, "Tax Rate For Calcs", index=0) if safe_get(financials, "Tax Rate For Calcs", index=0) is not None else DEFAULT_TAX_RATE # approximate if info not available
         nopat = ebit * (1 - tax_rate)
-        total_debt = safe_get("totalDebt")
-        total_equity = balance_sheet.loc["Stockholders Equity"].iloc[0]
+        total_debt = safe_get(info, "totalDebt")
+        total_equity = safe_get(balance_sheet, "Stockholders Equity", index=0)
 
-        roic = (nopat / (total_debt + total_equity)) * 100
+        if nopat is None or total_debt is None or total_equity is None:
+            roic = None
+        else:
+            roic = (nopat / (total_debt + total_equity)) * 100
 
         # Convert to percentages
         revenue_growth = revenue_growth * 100 if revenue_growth is not None else None
         earnings_growth = earnings_growth * 100 if earnings_growth is not None else None
 
         # === DIVIDENDS & EARNINGS ===
-        trailing_eps = safe_get("trailingEps")
-        forward_eps = safe_get("forwardEps")
-        dividend_yield = safe_get("dividendYield")
-        payout_ratio = safe_get("payoutRatio")
+        trailing_eps = safe_get(info, "trailingEps")
+        forward_eps = safe_get(info, "forwardEps")
+        dividend_yield = safe_get(info, "dividendYield")
+        payout_ratio = safe_get(info, "payoutRatio")
 
         # === CALENDAR DATES ===
         earnings_date = None
@@ -337,11 +276,11 @@ class YahooProcessing:
             "date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
             # Valuation
             "marketCap": market_cap,
-            "pe_trailing": round(trailing_pe, 2),
-            "pe_forward": round(forward_pe, 2),
-            "pb": round(pb, 2),
-            "ps": round(ps, 2),
-            "ev_ebitda": round(ev_ebitda, 2),
+            "pe_trailing": safe_round(trailing_pe, 2),
+            "pe_forward": safe_round(forward_pe, 2),
+            "pb": safe_round(pb, 2),
+            "ps": safe_round(ps, 2),
+            "ev_ebitda": safe_round(ev_ebitda, 2),
             
             # Cash Flow
             "totalCash": total_cash,
@@ -351,21 +290,21 @@ class YahooProcessing:
             "debtToFCF": debt_to_fcf,
             
             # Margins
-            "grossMargin": round(gross_margin, 2),
-            "operatingMargin": round(op_margin, 2),
-            "netMargin": round(net_margin, 2),
+            "grossMargin": safe_round(gross_margin, 2),
+            "operatingMargin": safe_round(op_margin, 2),
+            "netMargin": safe_round(net_margin, 2),
             
             # Growth
-            "revenueGrowth": round(revenue_growth, 2),
-            "earningsGrowth": round(earnings_growth, 2),
-            "roce": round(roce, 2),
-            "roic": round(roic, 2),
+            "revenueGrowth": safe_round(revenue_growth, 2),
+            "earningsGrowth": safe_round(earnings_growth, 2),
+            "roce": safe_round(roce, 2),
+            "roic": safe_round(roic, 2),
             
             # Dividend & Earnings
             "trailingEPS": trailing_eps,
             "forwardEPS": forward_eps,
             "dividendYield": dividend_yield,
-            "payoutRatio": round(payout_ratio, 2),
+            "payoutRatio": safe_round(payout_ratio, 2),
             "nextEarningsDate": earnings_date,
             "exDividendDate": ex_div_date,
             "payoutDate": div_date,

@@ -1,6 +1,34 @@
 import datetime
 import pandas as pd
 
+def _dates_to_quarters(self, dates: pd.Series, quarterly:bool) -> pd.Series:
+    dates = pd.to_datetime(dates)
+
+    if not quarterly:
+        return dates.dt.year.map(lambda y: f"CY{y}")
+        # # Annual reports: map to nearest year-end
+        # def nearest_year(dt):
+        #     dec31 = pd.Timestamp(year=dt.year, month=12, day=31)
+        #     # if date is closer to previous year's Dec 31, subtract 1
+        #     return f"CY{dt.year - 1}" if (dt - dec31).days < -183 else f"CY{dt.year}"
+
+        # return dates.apply(nearest_year)
+    
+    else:
+        # Quarterly reports: map to nearest canonical quarter end
+        return dates.apply(nearest_quarter)
+
+def nearest_quarter(dt):
+    year = dt.year
+    quarters = {
+        pd.Timestamp(f"{year}-03-31"): f"CY{year}Q1",
+        pd.Timestamp(f"{year}-06-30"): f"CY{year}Q2",
+        pd.Timestamp(f"{year}-09-30"): f"CY{year}Q3",
+        pd.Timestamp(f"{year}-12-31"): f"CY{year}Q4",
+    }
+    nearest = min(quarters.keys(), key=lambda x: abs(x - dt))
+    return quarters[nearest]
+     
 def safe_strftime(value, fmt="%Y-%m-%d"):
     if value is None:
         return None

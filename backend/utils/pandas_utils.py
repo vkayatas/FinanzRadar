@@ -1,7 +1,7 @@
 
 import shutil
-import numpy as np
 import pandas as pd
+from datetime import datetime, timezone
 
 from utils.math_utils import safe_typecast
 from utils.config.logging import init_logger
@@ -9,6 +9,42 @@ from utils.config.logging import init_logger
 # Initialize logger
 logger = init_logger(name=__name__, level="DEBUG", log_file="logs/app.log")
 
+def perf(df, current, period, prefix:str):
+    today = df.index[-1]
+
+    if period == "1M":
+        target_date = today - pd.DateOffset(months=1)
+    elif period == "YTD":
+        start = datetime(today.year, 1, 1, tzinfo=timezone.utc)
+        # pick first available price on/after Jan 1
+        ytd_data = df.loc[df.index >= start]
+        if ytd_data.empty:
+            return None
+        price_then = ytd_data['Close'].iloc[0]
+        return {
+            f"rel{prefix}": round((current - price_then) / price_then * 100, 2),
+            f"abs{prefix}": round(current - price_then, 2),
+        }
+    elif period == "1Y":
+        target_date = today - pd.DateOffset(years=1)
+    elif period == "3Y":
+        target_date = today - pd.DateOffset(years=3)
+    elif period == "5Y":
+        target_date = today - pd.DateOffset(years=5)
+    else:
+        return None
+
+    # Find closest trading day on or before target_date
+    past_data = df.loc[df.index <= target_date]
+    if past_data.empty:
+        return None
+    past_price = past_data['Close'].iloc[-1]
+
+    return {
+        f"rel{prefix}": round((current - past_price) / past_price * 100, 2),
+        f"abs{prefix}": round(current - past_price, 2),
+    }
+            
 def safe_typecast_series(series, target_type="float"):
     return series.apply(lambda v: safe_typecast(v, target_type))
 
