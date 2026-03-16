@@ -1,0 +1,22 @@
+[project]
+name = "finanzradar-backend"
+version = "0.1.0"
+description = "Fundamental analysis backend — SEC EDGAR parsing & FastAPI server"
+requires-python = ">=3.11"
+dependencies = [
+    "coloredlogs>=15.0",
+    "fastapi>=0.115",
+    "lxml>=5.0",
+    "pandas>=2.2",
+    "pyarrow>=18.0",
+    "requests>=2.32",
+    "tqdm>=4.67",
+    "uvicorn>=0.34",
+    "yfinance>=0.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.8",
+]

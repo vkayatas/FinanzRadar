@@ -109,28 +109,39 @@ FinanzRadar/
 
 ## Setup & Installation
 
-### Backend
+### Option A: Docker Compose (recommended)
 
 ```bash
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+docker compose up --build
 ```
 
-### Frontend
+This starts both services:
+- **Backend** (FastAPI) → `http://localhost:8000`
+- **Frontend** (Nginx) → `http://localhost:3000` (proxies `/api/` to backend)
+
+### Option B: Local development
+
+#### Backend (uv)
+
+```bash
+cd backend
+uv sync            # creates .venv and installs dependencies from pyproject.toml
+```
+
+#### Frontend
 
 ```bash
 cd vue-frontend
 npm install
 ```
 
-## Running
+## Running (local dev)
 
 ### 1. Populate the feature store
 
 ```bash
 cd backend
-python main_update_database.py
+uv run python main_update_database.py
 ```
 
 This fetches SEC EDGAR data and Yahoo Finance data for all configured tickers, processes them, and writes Parquet files to the feature store.
@@ -139,7 +150,7 @@ This fetches SEC EDGAR data and Yahoo Finance data for all configured tickers, p
 
 ```bash
 cd backend
-python main.py
+uv run uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
 The FastAPI server starts on `http://localhost:8000`.

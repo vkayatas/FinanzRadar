@@ -1,0 +1,19 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/featurestore:/app/featurestore
+      - ./logs:/app/logs
+    environment:
+      - FEATURESTORE_PATH=featurestore/20_silver
+    restart: unless-stopped
+
+  frontend:
+    build: ./vue-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped

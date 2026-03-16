@@ -1,9 +1,0 @@
-lxml
-tqdm
-pandas
-fastapi
-yfinance
-pyarrow
-uvicorn
-requests
-coloredlogs
