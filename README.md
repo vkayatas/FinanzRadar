@@ -1,0 +1,3 @@
+# FinanzRadar
+
+FinanzRadar is a fundamental analysis tool designed specifically for US companies, leveraging SEC EDGAR filings. With its powerful backend, FinanzRadar parses these filings to extract crucial financial metrics, offering users deep insights into the financial health of companies. The intuitive Vue.js frontend visualizes these metrics, making it easy for users to navigate and understand the data. Whether you are an investor, analyst, or simply interested in financial data, FinanzRadar provides the tools you need to make informed decisions.
